@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planning Rhéophérèse</title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <h1>Planning Rhéophérèse</h1>
+    </div>
+    <nav class="header-nav">
+      <button class="nav-btn active" data-view="calendar">Calendrier</button>
+      <button class="nav-btn" data-view="patients">Patients</button>
+      <button class="nav-btn" data-view="lines">Lignes</button>
+      <button class="nav-btn" data-view="analytics">Statistiques</button>
+    </nav>
+  </header>
+
+  <!-- Calendar View -->
+  <main id="view-calendar" class="view active">
+    <!-- Month navigation -->
+    <div class="month-nav">
+      <button id="btn-prev-month" class="btn-icon" title="Mois précédent">&larr;</button>
+      <h2 id="current-month-label"></h2>
+      <button id="btn-next-month" class="btn-icon" title="Mois suivant">&rarr;</button>
+      <button id="btn-today" class="btn-small">Aujourd'hui</button>
+    </div>
+
+    <!-- Filters -->
+    <div class="filter-bar">
+      <label><input type="checkbox" id="filter-tandem" checked> Tandem</label>
+      <label><input type="checkbox" id="filter-isolee" checked> Isolée</label>
+      <label><input type="checkbox" id="filter-cancelled" checked> Annulées</label>
+      <label><input type="checkbox" id="filter-active" checked> Actives</label>
+    </div>
+
+    <!-- Calendar grid -->
+    <div id="calendar-grid" class="calendar-grid"></div>
+  </main>
+
+  <!-- Patients View -->
+  <main id="view-patients" class="view">
+    <div class="view-header">
+      <h2>Gestion des patients</h2>
+      <button id="btn-add-patient" class="btn-primary">+ Ajouter un patient</button>
+    </div>
+    <div class="search-bar">
+      <input type="text" id="patient-search" placeholder="Rechercher un patient...">
+    </div>
+    <div id="patients-list" class="patients-list"></div>
+  </main>
+
+  <!-- Lines View -->
+  <main id="view-lines" class="view">
+    <div class="view-header">
+      <h2>Suivi des lignes de rhéophérèse</h2>
+      <button id="btn-add-line" class="btn-primary">+ Ajouter une ligne</button>
+    </div>
+    <div id="lines-list" class="lines-list"></div>
+  </main>
+
+  <!-- Analytics View -->
+  <main id="view-analytics" class="view">
+    <div class="analytics-nav">
+      <button class="btn-small active" id="btn-analytics-monthly">Mensuel</button>
+      <button class="btn-small" id="btn-analytics-yearly">Annuel</button>
+      <div class="analytics-period">
+        <button id="btn-analytics-prev" class="btn-icon">&larr;</button>
+        <span id="analytics-period-label"></span>
+        <button id="btn-analytics-next" class="btn-icon">&rarr;</button>
+      </div>
+      <div class="export-buttons">
+        <button id="btn-export-csv" class="btn-small">Export CSV</button>
+        <button id="btn-export-pdf" class="btn-small">Export PDF</button>
+        <button id="btn-export-lines-csv" class="btn-small">Export Lignes CSV</button>
+      </div>
+    </div>
+    <div class="stats-cards" id="stats-cards"></div>
+    <div class="charts-container">
+      <div class="chart-box">
+        <h3>Répartition Tandem / Isolée</h3>
+        <canvas id="chart-types"></canvas>
+      </div>
+      <div class="chart-box">
+        <h3>Raisons d'annulation</h3>
+        <canvas id="chart-cancellations"></canvas>
+      </div>
+      <div class="chart-box wide">
+        <h3 id="chart-activity-title">Activité</h3>
+        <canvas id="chart-activity"></canvas>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal: Add/Edit Session -->
+  <div id="modal-session" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-session-title">Planifier une séance</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="form-session">
+        <input type="hidden" id="session-id">
+        <input type="hidden" id="session-date">
+        <input type="hidden" id="session-slot">
+        <input type="hidden" id="session-position">
+        <div class="form-group">
+          <label>Date / Créneau</label>
+          <p id="session-info-label" class="info-text"></p>
+        </div>
+        <div class="form-group">
+          <label for="session-patient">Patient</label>
+          <div class="autocomplete-wrapper">
+            <input type="text" id="session-patient-search" placeholder="Rechercher un patient..." autocomplete="off">
+            <div id="session-patient-dropdown" class="autocomplete-dropdown"></div>
+            <input type="hidden" id="session-patient-id">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Type de séance</label>
+          <div class="radio-group">
+            <label><input type="radio" name="session-type" value="isolee" checked> Isolée</label>
+            <label><input type="radio" name="session-type" value="tandem"> Tandem</label>
+          </div>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">Enregistrer</button>
+          <button type="button" class="btn-secondary modal-close">Annuler</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Cancel Session -->
+  <div id="modal-cancel" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Annuler une séance</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="form-cancel">
+        <input type="hidden" id="cancel-session-id">
+        <div class="form-group">
+          <label>Raison de l'annulation</label>
+          <div class="radio-group">
+            <label><input type="radio" name="cancel-reason" value="medical" required> Raison médicale</label>
+            <label><input type="radio" name="cancel-reason" value="patient_absence"> Absence du patient</label>
+            <label><input type="radio" name="cancel-reason" value="staff_absence"> Absence de personnel</label>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="cancel-comment">Commentaire</label>
+          <textarea id="cancel-comment" rows="3" placeholder="Commentaire optionnel..."></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn-danger">Confirmer l'annulation</button>
+          <button type="button" class="btn-secondary modal-close">Retour</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Add/Edit Patient -->
+  <div id="modal-patient" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-patient-title">Ajouter un patient</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="form-patient">
+        <input type="hidden" id="patient-id">
+        <div class="form-group">
+          <label for="patient-lastname">Nom</label>
+          <input type="text" id="patient-lastname" required>
+        </div>
+        <div class="form-group">
+          <label for="patient-firstname">Prénom</label>
+          <input type="text" id="patient-firstname" required>
+        </div>
+        <div class="form-group">
+          <label for="patient-notes">Notes</label>
+          <textarea id="patient-notes" rows="3"></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">Enregistrer</button>
+          <button type="button" class="btn-secondary modal-close">Annuler</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: Add/Edit Line -->
+  <div id="modal-line" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-line-title">Ajouter une ligne</h3>
+        <button class="modal-close">&times;</button>
+      </div>
+      <form id="form-line">
+        <input type="hidden" id="line-id">
+        <div class="form-group">
+          <label for="line-label">Libellé</label>
+          <input type="text" id="line-label" required placeholder="Ex: Ligne #12">
+        </div>
+        <div class="form-group">
+          <label for="line-placement-date">Date de pose</label>
+          <input type="date" id="line-placement-date" required>
+        </div>
+        <div class="form-group">
+          <label for="line-disposal-date">Date de retrait</label>
+          <input type="date" id="line-disposal-date">
+        </div>
+        <div class="form-group">
+          <label for="line-disposal-reason">Raison du retrait</label>
+          <input type="text" id="line-disposal-reason" placeholder="Ex: Infection, fin de traitement...">
+        </div>
+        <div class="form-group">
+          <label for="line-notes">Notes</label>
+          <textarea id="line-notes" rows="3"></textarea>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">Enregistrer</button>
+          <button type="button" class="btn-secondary modal-close">Annuler</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Session Context Menu -->
+  <div id="session-context-menu" class="context-menu">
+    <button data-action="edit">Modifier</button>
+    <button data-action="cancel">Annuler la séance</button>
+    <button data-action="restore">Restaurer la séance</button>
+    <button data-action="delete">Supprimer</button>
+  </div>
+
+  <!-- Toast notifications -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <script src="/js/app.js"></script>
+</body>
+</html>
