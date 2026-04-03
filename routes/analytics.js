@@ -24,8 +24,10 @@ router.get('/monthly', (req, res) => {
   const cancelReasons = { medical: 0, patient_absence: 0, staff_absence: 0 };
   cancelByReason.forEach(r => { cancelReasons[r.cancel_reason] = r.count; });
 
+  // Unique patients
   const patients = db.prepare('SELECT COUNT(DISTINCT patient_id) as count FROM sessions WHERE date LIKE ?').get(prefix).count;
 
+  // Sessions per day
   const perDay = db.prepare(`
     SELECT date, COUNT(*) as total,
       SUM(CASE WHEN cancelled = 0 THEN 1 ELSE 0 END) as active,
@@ -34,15 +36,18 @@ router.get('/monthly', (req, res) => {
     GROUP BY date ORDER BY date
   `).all(prefix);
 
+  // Occupation rate
   const [year, mon] = month.split('-').map(Number);
   const daysInMonth = new Date(year, mon, 0).getDate();
   let workDays = 0;
   for (let d = 1; d <= daysInMonth; d++) {
     const dow = new Date(year, mon - 1, d).getDay();
-    if (dow !== 0) workDays++;
+    if (dow !== 0) workDays++; // Mon-Sat
   }
-  const maxSessions = workDays * 6;
+  const maxSessions = workDays * 6; // 3 slots * 2 positions
   const occupationRate = maxSessions > 0 ? ((active / maxSessions) * 100).toFixed(1) : 0;
+
+  // Cancellation rate
   const cancelRate = total > 0 ? ((cancelled / total) * 100).toFixed(1) : 0;
 
   res.json({
@@ -76,6 +81,7 @@ router.get('/yearly', (req, res) => {
   const cancelReasons = { medical: 0, patient_absence: 0, staff_absence: 0 };
   cancelByReason.forEach(r => { cancelReasons[r.cancel_reason] = r.count; });
 
+  // Per month breakdown
   const perMonth = db.prepare(`
     SELECT substr(date, 1, 7) as month,
       COUNT(*) as total,

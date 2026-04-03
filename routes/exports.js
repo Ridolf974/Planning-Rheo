@@ -49,7 +49,8 @@ router.get('/csv', (req, res) => {
   const csv = stringify(rows, { header: true, delimiter: ';' });
 
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.setHeader('Content-Disposition', `attachment; filename=\"${filename}\"`);
+  // BOM for Excel UTF-8
   res.send('\ufeff' + csv);
 });
 
@@ -78,6 +79,7 @@ router.get('/pdf', (req, res) => {
     ORDER BY s.date, s.slot, s.position
   `).all(prefix);
 
+  // Analytics
   const total = sessions.length;
   const active = sessions.filter(s => !s.cancelled).length;
   const cancelled = sessions.filter(s => s.cancelled).length;
@@ -90,12 +92,14 @@ router.get('/pdf', (req, res) => {
   const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 40 });
 
   res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `attachment; filename="planning-${month || year}.pdf"`);
+  res.setHeader('Content-Disposition', `attachment; filename=\"planning-${month || year}.pdf\"`);
   doc.pipe(res);
 
+  // Title
   doc.fontSize(18).text(title, { align: 'center' });
   doc.moveDown();
 
+  // Summary
   doc.fontSize(12);
   doc.text(`Séances totales: ${total}  |  Réalisées: ${active}  |  Annulées: ${cancelled}`);
   doc.text(`Tandem: ${tandem}  |  Isolées: ${isolee}`);
@@ -105,11 +109,13 @@ router.get('/pdf', (req, res) => {
   }
   doc.moveDown();
 
+  // Table
   const colWidths = [80, 50, 35, 140, 60, 60, 120, 150];
   const headers = ['Date', 'Créneau', 'Pos.', 'Patient', 'Type', 'Statut', 'Raison ann.', 'Commentaire'];
   const startX = 40;
   let y = doc.y;
 
+  // Header row
   doc.fontSize(9).font('Helvetica-Bold');
   let x = startX;
   headers.forEach((h, i) => {
@@ -120,6 +126,7 @@ router.get('/pdf', (req, res) => {
   doc.moveTo(startX, y).lineTo(startX + colWidths.reduce((a, b) => a + b, 0), y).stroke();
   y += 5;
 
+  // Data rows
   doc.font('Helvetica').fontSize(8);
   sessions.forEach(s => {
     if (y > 540) {
@@ -170,7 +177,7 @@ router.get('/lines-csv', (req, res) => {
 
   const csv = stringify(rows, { header: true, delimiter: ';' });
   res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-  res.setHeader('Content-Disposition', `attachment; filename="lignes-${year || 'all'}.csv"`);
+  res.setHeader('Content-Disposition', `attachment; filename=\"lignes-${year || 'all'}.csv\"`);
   res.send('\ufeff' + csv);
 });
 
